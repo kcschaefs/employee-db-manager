@@ -2,8 +2,11 @@ const inquirer = require("inquirer");
 const mysql = require("mysql2");
 const consoleTable = require("console.table");
 let departments = [];
+let roles = [];
+let managers = [];
+let employees = [];
 
-// Connect to database
+// Connect to database  -------------------------------------------
 const db = mysql.createConnection(
   {
     host: 'localhost',
@@ -14,7 +17,7 @@ const db = mysql.createConnection(
   console.log(`Connected to the company_db database.`)
 );
 
-// Inital prompts
+// Inital prompts  -------------------------------------------
 const options = [
   {
     type: 'list',
@@ -24,7 +27,7 @@ const options = [
   }
 ];
 
-// Add department prompts + functionality
+// Add department prompts + functionality  -------------------------------------------
 const addDeptQuestions = [
   {
     type: 'input',
@@ -50,7 +53,7 @@ const departmentChoices = () => {
   return departments.map(dep => dep.dept_name);
 };
 
-// Add role prompt + funcctionality
+// Add role prompt + functionality  -------------------------------------------
 function getAddRoleQuestions() {
   return [
     {
@@ -74,19 +77,112 @@ function getAddRoleQuestions() {
 
 function addRole() {
   inquirer.prompt(getAddRoleQuestions()).then(roleAnswers => {
-    console.log(JSON.stringify(roleAnswers));
+    // console.log(JSON.stringify(roleAnswers));
     const selectedDept = departments.filter(dep => dep.dept_name === roleAnswers.deptName)[0];
-    console.log(JSON.stringify(selectedDept));
+    // console.log(JSON.stringify(selectedDept));
     db.query(`INSERT INTO role (title, salary, department_id) VALUES (?,?,?)`, [roleAnswers.title, roleAnswers.salary, selectedDept.department], function (err, results) {
       if (err) {
         console.log(err);
       } else console.log("Role Added!");
+      roles.push({ "title": roleAnswers.title }, { "salary": roleAnswers.salary }, { "department": selectedDept.department });
       askUser();
     });
   });
 };
 
-// User prompts
+const roleChoices = () => {
+  return roles.map(role => role.title);
+};
+
+// Add employee prompt + functionality  -------------------------------------------
+function getAddEmployeeQuestions() {
+  return [
+    {
+      type: 'input',
+      name: 'firstName',
+      message: "What is the employee's first name?",
+    },
+    {
+      type: 'input',
+      name: 'lastName',
+      message: "What is the employee's last name?",
+    },
+    {
+      type: 'list',
+      name: 'roleName',
+      message: "What is their role/title?",
+      choices: roleChoices()
+    },
+    {
+      type: 'list',
+      name: 'managerName',
+      message: "Who is their manager?",
+      choices: managerChoices()
+    },
+  ]
+};
+
+const managerChoices = () => {
+  console.log(JSON.stringify(managers));
+  return managers.map(employee => (employee.first_name + " " + employee.last_name));
+};
+
+function addEmloyee() {
+  inquirer.prompt(getAddEmployeeQuestions()).then(eeAnswers => {
+    // console.log(JSON.stringify(eeAnswers));
+    const selectedRole = roles.filter(role => role.title === eeAnswers.roleName)[0];
+    const selectedManager = managers.filter(employee => (employee.first_name + " " + employee.last_name) === eeAnswers.managerName)[0];
+    // console.log(JSON.stringify(selectedManager));
+    db.query(`INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?, ?)`, [eeAnswers.firstName, eeAnswers.lastName, selectedRole.id, selectedManager.manager_id], function (err, results) {
+      if (err) {
+        console.log(err);
+      } else console.log("Employee Added!");
+      managers.push({ "first_name": eeAnswers.firstName }, { "last_name": eeAnswers.lastName }, { "role": selectedRole.title }, { "manager": selectedManager.managerName });
+      askUser();
+    });
+  });
+};
+
+// Update employee prompts + functionality
+
+
+const employeeChoices = () => {
+  console.log(JSON.stringify(employees));
+  return employees.map(employee => (employee.first_name + " " + employee.last_name));
+};
+
+function getUpdateEmployeeQuestions () {
+  return [
+  {
+    type: 'list',
+    name: 'employeeName',
+    message: "Which employee would you like to update?",
+    choices: employeeChoices()
+  },
+  {
+    type: 'list',
+    name: 'roleName',
+    message: "What is their new role/title?",
+    choices: roleChoices()
+  }
+];
+} 
+
+function updateEmloyee() {
+  console.log(JSON.stringify(getUpdateEmployeeQuestions()));
+  inquirer.prompt(getUpdateEmployeeQuestions()).then(eeUpdateAnswers => {
+    const selectedRole = roles.filter(role => role.title === eeUpdateAnswers.roleName)[0];
+    db.query(`UPDATE employee (id,role_id) VALUES (?,?)`, [eeUpdateAnswers.id, selectedRole.id], function (err, results) {
+      if (err) {
+        console.log(err);
+      } else console.log("Role Updated!");
+      askUser();
+    });
+  })
+};
+
+
+// User prompts -------------------------------------------
 function askUser() {
   inquirer.prompt(options).then(optionsAnswers => {
     if (optionsAnswers.startOptions === "View all Departments") {
@@ -108,28 +204,49 @@ function askUser() {
       addDept();
     } else if (optionsAnswers.startOptions === "Add a Role") {
       addRole();
-    }
-
-
-
-
-    else {
+    } else if (optionsAnswers.startOptions === "Add an Employee") {
+      addEmloyee();
+    } else if (optionsAnswers.startOptions === "Update an Employee Role") {
+      updateEmloyee();
+    } else {
       db.end();
     }
   });
 }
 
-// Cache from DB and initialize prompts
-function init() {
+// Queries to grab cached data  -------------------------------------------
+function queryDept() {
   db.query(`SELECT dept_name,id AS department FROM department;`, function (err, results) {
-    // console.table(results);
-    //results == department;
     departments = results;
-    console.log(results)
+    queryRole();
+  })
+};
+
+function queryRole() {
+  db.query(`SELECT title,id FROM role;`, function (err, results) {
+    roles = results;
+    // console.log(JSON.stringify(roles));
+    queryManager();
+  })
+};
+
+function queryManager() {
+  db.query(`SELECT first_name,last_name,id FROM employee WHERE manager_id IS null;`, function (err, results) {
+    managers = results;
+    queryEmployee();
+  })
+};
+
+function queryEmployee() {
+  db.query(`SELECT first_name,last_name,id FROM employee;`, function (err, results) {
+    employees = results;
     askUser();
-  });
-  // console.log(results[0])
-  // return results[0];
-}
+  })
+};
+
+// Cache from DB and initialize prompts  -------------------------------------------
+function init() {
+  queryDept();
+};
 
 init();
