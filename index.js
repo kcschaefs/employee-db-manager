@@ -14,6 +14,7 @@ const db = mysql.createConnection(
   console.log(`Connected to the company_db database.`)
 );
 
+// Inital prompts
 const options = [
   {
     type: 'list',
@@ -23,6 +24,7 @@ const options = [
   }
 ];
 
+// Add department prompts + functionality
 const addDeptQuestions = [
   {
     type: 'input',
@@ -38,12 +40,17 @@ function addDept() {
       if (err) {
         console.log(err);
       } else console.log("Department Added!");
-      departments.push({"department": deptAdd})
+      departments.push({ "department": deptAdd })
       askUser();
     })
   });
 };
 
+const departmentChoices = () => {
+  return departments.map(dep => dep.dept_name);
+};
+
+// Add role prompt + funcctionality
 function getAddRoleQuestions() {
   return [
     {
@@ -68,25 +75,18 @@ function getAddRoleQuestions() {
 function addRole() {
   inquirer.prompt(getAddRoleQuestions()).then(roleAnswers => {
     console.log(JSON.stringify(roleAnswers));
-    const selectedDept = departments.filter(dep=>dep.dept_name===roleAnswers.deptName)[0];
+    const selectedDept = departments.filter(dep => dep.dept_name === roleAnswers.deptName)[0];
     console.log(JSON.stringify(selectedDept));
-    db.query(`INSERT INTO role (title, salary, department_id) VALUES (?,?,?)`, [roleAnswers.title,roleAnswers.salary,selectedDept.department], function (err, results) {
+    db.query(`INSERT INTO role (title, salary, department_id) VALUES (?,?,?)`, [roleAnswers.title, roleAnswers.salary, selectedDept.department], function (err, results) {
       if (err) {
         console.log(err);
       } else console.log("Role Added!");
       askUser();
-    });   
+    });
   });
 };
 
-const departmentChoices = () => {
-  return departments.map(dep=>dep.dept_name);
-};
-
-// inquirer.prompt(addRole()).then(roleAnswers => {
-//   console.log(roleAnswers);
-// });
-
+// User prompts
 function askUser() {
   inquirer.prompt(options).then(optionsAnswers => {
     if (optionsAnswers.startOptions === "View all Departments") {
@@ -119,8 +119,7 @@ function askUser() {
   });
 }
 
-// askUser();
-
+// Cache from DB and initialize prompts
 function init() {
   db.query(`SELECT dept_name,id AS department FROM department;`, function (err, results) {
     // console.table(results);
