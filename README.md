@@ -1,6 +1,6 @@
 # Employee Database Manager
 
-[Video Link]()
+[Video Link](https://drive.google.com/file/d/1aEL40zY5gkbIiVmtxB7QI3tLaBUXLMLX/view?usp=share_link)
 
 ## User Story
 AS A business owner
