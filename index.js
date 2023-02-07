@@ -7,6 +7,7 @@ let managers = [];
 let employees = [];
 
 // Connect to database  -------------------------------------------
+
 const db = mysql.createConnection(
   {
     host: 'localhost',
@@ -18,6 +19,7 @@ const db = mysql.createConnection(
 );
 
 // Inital prompts  -------------------------------------------
+
 const options = [
   {
     type: 'list',
@@ -28,6 +30,7 @@ const options = [
 ];
 
 // Add department prompts + functionality  -------------------------------------------
+
 const addDeptQuestions = [
   {
     type: 'input',
@@ -42,7 +45,7 @@ function addDept() {
     db.query(`INSERT INTO department (dept_name) VALUES (?)`, [deptAdd], function (err, results) {
       if (err) {
         console.log(err);
-      } else console.log("Department Added!");
+      } else console.log("** Department Added! **");
       departments.push({ "department": deptAdd })
       askUser();
     })
@@ -54,6 +57,7 @@ const departmentChoices = () => {
 };
 
 // Add role prompt + functionality  -------------------------------------------
+
 function getAddRoleQuestions() {
   return [
     {
@@ -77,13 +81,11 @@ function getAddRoleQuestions() {
 
 function addRole() {
   inquirer.prompt(getAddRoleQuestions()).then(roleAnswers => {
-    // console.log(JSON.stringify(roleAnswers));
     const selectedDept = departments.filter(dep => dep.dept_name === roleAnswers.deptName)[0];
-    // console.log(JSON.stringify(selectedDept));
     db.query(`INSERT INTO role (title, salary, department_id) VALUES (?,?,?)`, [roleAnswers.title, roleAnswers.salary, selectedDept.department], function (err, results) {
       if (err) {
         console.log(err);
-      } else console.log("Role Added!");
+      } else console.log("** Role Added! **");
       roles.push({ "title": roleAnswers.title }, { "salary": roleAnswers.salary }, { "department": selectedDept.department });
       askUser();
     });
@@ -95,6 +97,7 @@ const roleChoices = () => {
 };
 
 // Add employee prompt + functionality  -------------------------------------------
+
 function getAddEmployeeQuestions() {
   return [
     {
@@ -123,31 +126,26 @@ function getAddEmployeeQuestions() {
 };
 
 const managerChoices = () => {
-  console.log(JSON.stringify(managers));
   return managers.map(employee => (employee.first_name + " " + employee.last_name));
 };
 
 function addEmloyee() {
   inquirer.prompt(getAddEmployeeQuestions()).then(eeAnswers => {
-    // console.log(JSON.stringify(eeAnswers));
     const selectedRole = roles.filter(role => role.title === eeAnswers.roleName)[0];
     const selectedManager = managers.filter(employee => (employee.first_name + " " + employee.last_name) === eeAnswers.managerName)[0];
-    // console.log(JSON.stringify(selectedManager));
     db.query(`INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?, ?)`, [eeAnswers.firstName, eeAnswers.lastName, selectedRole.id, selectedManager.manager_id], function (err, results) {
       if (err) {
         console.log(err);
-      } else console.log("Employee Added!");
+      } else console.log("** Employee Added! **");
       managers.push({ "first_name": eeAnswers.firstName }, { "last_name": eeAnswers.lastName }, { "role": selectedRole.title }, { "manager": selectedManager.managerName });
       askUser();
     });
   });
 };
 
-// Update employee prompts + functionality
-
+// Update employee prompts + functionality --------------------------
 
 const employeeChoices = () => {
-  console.log(JSON.stringify(employees));
   return employees.map(employee => (employee.first_name + " " + employee.last_name));
 };
 
@@ -169,13 +167,13 @@ function getUpdateEmployeeQuestions () {
 } 
 
 function updateEmloyee() {
-  console.log(JSON.stringify(getUpdateEmployeeQuestions()));
   inquirer.prompt(getUpdateEmployeeQuestions()).then(eeUpdateAnswers => {
+    const selectedEmployee = employees.filter(employee => (employee.first_name + " " + employee.last_name) === eeUpdateAnswers.employeeName)[0];
     const selectedRole = roles.filter(role => role.title === eeUpdateAnswers.roleName)[0];
-    db.query(`UPDATE employee (id,role_id) VALUES (?,?)`, [eeUpdateAnswers.id, selectedRole.id], function (err, results) {
+    db.query(`UPDATE employee SET role_id=? WHERE id=?`, [selectedRole.id, selectedEmployee.id], function (err, results) {
       if (err) {
         console.log(err);
-      } else console.log("Role Updated!");
+      } else console.log("** Employee Role Updated! **");
       askUser();
     });
   })
@@ -183,6 +181,7 @@ function updateEmloyee() {
 
 
 // User prompts -------------------------------------------
+
 function askUser() {
   inquirer.prompt(options).then(optionsAnswers => {
     if (optionsAnswers.startOptions === "View all Departments") {
@@ -215,6 +214,7 @@ function askUser() {
 }
 
 // Queries to grab cached data  -------------------------------------------
+
 function queryDept() {
   db.query(`SELECT dept_name,id AS department FROM department;`, function (err, results) {
     departments = results;
@@ -225,7 +225,6 @@ function queryDept() {
 function queryRole() {
   db.query(`SELECT title,id FROM role;`, function (err, results) {
     roles = results;
-    // console.log(JSON.stringify(roles));
     queryManager();
   })
 };
@@ -245,6 +244,7 @@ function queryEmployee() {
 };
 
 // Cache from DB and initialize prompts  -------------------------------------------
+
 function init() {
   queryDept();
 };
